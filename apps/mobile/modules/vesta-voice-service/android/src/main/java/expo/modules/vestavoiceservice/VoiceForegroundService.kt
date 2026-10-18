@@ -28,18 +28,27 @@ class VoiceForegroundService : Service() {
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
       .setContentTitle(title)
       .setContentText(body)
-      .setSmallIcon(applicationInfo.icon)
+      // Fork fix: the launcher icon is an adaptive icon, which Android rejects as a notification
+      // small icon ("Bad notification for startForeground"), killing the app the moment a voice
+      // conversation starts. A plain system microphone drawable is always valid.
+      .setSmallIcon(android.R.drawable.ic_btn_speak_now)
       .setOngoing(true)
       .build()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-      startForeground(
-        NOTIFICATION_ID,
-        notification,
-        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-      )
-    } else {
-      startForeground(NOTIFICATION_ID, notification)
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        startForeground(
+          NOTIFICATION_ID,
+          notification,
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        )
+      } else {
+        startForeground(NOTIFICATION_ID, notification)
+      }
+    } catch (error: RuntimeException) {
+      // Android 12+ refuses some foreground starts (background start, missing microphone grant);
+      // without the service the conversation still works while the app is on screen.
+      stopSelf()
     }
     return START_NOT_STICKY
   }
