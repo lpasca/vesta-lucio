@@ -78,6 +78,9 @@ export interface NativeBridge {
   appUpdate: AppUpdater | null;
   /** OS launch-at-login toggle, driven by the App Settings Startup card; null in the browser. */
   loginItem: LoginItem | null;
+  /** Save bytes into Downloads and open them with the OS default app; null in the browser. */
+  saveAndOpenFile:
+    ((name: string, data: ArrayBuffer) => Promise<string>) | null;
 }
 
 /**
@@ -109,6 +112,7 @@ export interface VestaNativeApi {
   onWindowMaximizedChange(cb: (maximized: boolean) => void): () => void;
   getOpenAtLogin(): Promise<boolean>;
   setOpenAtLogin(enabled: boolean): Promise<void>;
+  saveAndOpenFile(name: string, data: ArrayBuffer): Promise<string>;
 }
 
 declare global {

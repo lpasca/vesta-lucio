@@ -45,6 +45,7 @@ function fakeApi(overrides: Partial<VestaNativeApi> = {}): VestaNativeApi {
     onWindowMaximizedChange: vi.fn(() => noopUnsubscribe),
     getOpenAtLogin: vi.fn(() => Promise.resolve(false)),
     setOpenAtLogin: vi.fn(() => Promise.resolve()),
+    saveAndOpenFile: vi.fn(() => Promise.resolve("/downloads/a.txt")),
   } satisfies VestaNativeApi;
   return { ...base, ...overrides };
 }

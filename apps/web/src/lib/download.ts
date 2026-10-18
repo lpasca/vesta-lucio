@@ -1,5 +1,6 @@
 import { appChatAttachmentPath, type ChatAttachment } from "@vesta/core";
 import { ApiError, httpClient } from "@/api/client";
+import { native } from "@/lib/native";
 
 declare global {
   interface Window {
@@ -36,6 +37,12 @@ export async function downloadAttachment(
 }
 
 async function saveBlob(blob: Blob, name: string): Promise<DownloadOutcome> {
+  // Desktop app: no save dialog. The file lands in Downloads and opens in the OS default app,
+  // the way a mail client opens an attachment.
+  if (native.saveAndOpenFile) {
+    await native.saveAndOpenFile(name, await blob.arrayBuffer());
+    return "saved";
+  }
   if (typeof window.showSaveFilePicker === "function") {
     let handle: FileSystemFileHandle;
     try {

@@ -17,7 +17,7 @@ const variantSuffix = isDevelopment ? ".dev" : "";
 const iosBundleIdentifier =
   process.env.VESTA_APP_BUNDLE_ID ?? `ai.vesta.mobile${variantSuffix}`;
 const androidPackage =
-  process.env.VESTA_APP_BUNDLE_ID ?? `com.vesta.mobile${variantSuffix}`;
+  process.env.VESTA_APP_BUNDLE_ID ?? `com.vesta.mobile.lucio${variantSuffix}`;
 const appIcon = isDevelopment
   ? "./assets/app-icon-dev.png"
   : "./assets/app-icon.png";
@@ -37,17 +37,19 @@ const notificationPlugins = localIosNoPush
     ] satisfies NonNullable<ExpoConfig["plugins"]>);
 
 const config: ExpoConfig = {
-  name: isDevelopment ? "Vesta Dev" : "Vesta",
+  name: isDevelopment ? "Vesta L Dev" : "Vesta L",
   owner: "vesta-cloud",
   slug: "vesta",
   version: "0.3.20",
-  scheme: isDevelopment ? "vesta-dev" : "vesta",
+  scheme: isDevelopment ? "vesta-l-dev" : "vesta-l",
   orientation: "portrait",
   icon: appIcon,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  // Fork (lpasca/vesta-lucio): over-the-air updates off, so the upstream Expo channel can never
+  // replace this build's JS bundle; the fork ships only as full APKs from its own releases.
   updates: {
-    url: `https://u.expo.dev/${easProjectId}`,
+    enabled: false,
   },
   runtimeVersion: {
     policy: "appVersion",

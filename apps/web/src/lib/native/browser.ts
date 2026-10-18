@@ -80,5 +80,6 @@ export function createBrowserBridge(): NativeBridge {
     credentialStorageIsSecure: null,
     appUpdate: null,
     loginItem: null,
+    saveAndOpenFile: null,
   };
 }
