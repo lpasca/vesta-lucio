@@ -50,4 +50,6 @@ contextBridge.exposeInMainWorld("vestaNative", {
   getOpenAtLogin: () => ipcRenderer.invoke(CHANNEL.loginItemGet),
   setOpenAtLogin: (enabled: boolean) =>
     ipcRenderer.invoke(CHANNEL.loginItemSet, enabled),
+  saveAndOpenFile: (name: string, data: ArrayBuffer) =>
+    ipcRenderer.invoke(CHANNEL.fileSaveOpen, name, data),
 });

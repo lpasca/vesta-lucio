@@ -215,13 +215,26 @@ function AudioBlock({
   attachment: ChatAttachment;
 }) {
   const src = useAuthedSrc(appChatAttachmentPath(agent, attachment.id));
+  const startDownload = useDownloadsStore((state) => state.start);
   return (
     <span className="flex flex-col gap-0.5">
       {src !== null && (
         <audio src={src} controls className="h-10 max-w-[280px]" />
       )}
-      <span className="px-1 text-xs text-muted-foreground">
-        {attachment.name} · {formatBytes(attachment.size)}
+      <span className="flex items-center gap-1 px-1 text-xs text-muted-foreground">
+        <span className="truncate">
+          {attachment.name} · {formatBytes(attachment.size)}
+        </span>
+        <button
+          type="button"
+          aria-label={`open ${attachment.name}`}
+          onClick={() => {
+            startDownload(agent, attachment);
+          }}
+          className="rounded p-0.5 hover:bg-muted"
+        >
+          <Download className="size-3.5" />
+        </button>
       </span>
     </span>
   );

@@ -1,7 +1,9 @@
 import { appChatAttachmentPath, type ChatAttachment } from "@vesta/core";
 
-// Saving an attachment on mobile is a native download to the app cache followed by the system
-// share sheet, which is where "save to Files/Photos" lives on both platforms. The expo edges
+// Opening an attachment on mobile is a native download to the app cache, then the file is handed
+// to the app that opens its type (a PDF viewer, a player, an office app). Only when nothing on the
+// device opens it (or on iOS, where there is no such hand-off) does the system share sheet appear,
+// which is where "save to Files/Photos" lives. The expo edges
 // live in expo-save-io.ts; this module owns only the flow, so the suite runs in plain node.
 
 export class AttachmentRemovedError extends Error {
@@ -19,6 +21,8 @@ export interface SaveAttachmentIo {
     name: string,
     onProgress?: (written: number, total: number) => void,
   ) => Promise<string>;
+  /** Open the downloaded file in the app that handles its type; false when none could. */
+  open: (uri: string, mimeType: string) => Promise<boolean>;
   share: (uri: string, mimeType: string) => Promise<void>;
 }
 
@@ -42,5 +46,6 @@ export async function saveAttachment(
     if (status === 410) throw new AttachmentRemovedError();
     throw error;
   }
-  await io.share(uri, attachment.mime);
+  const opened = await io.open(uri, attachment.mime).catch(() => false);
+  if (!opened) await io.share(uri, attachment.mime);
 }

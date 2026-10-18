@@ -24,6 +24,7 @@ export const CHANNEL = {
   windowMaximized: "window-maximized",
   loginItemGet: "login-item:get",
   loginItemSet: "login-item:set",
+  fileSaveOpen: "file:save-open",
 } as const;
 
 // Channels the main process pushes to the renderer (webContents.send); every other channel is

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Ionicons } from "@expo/vector-icons";
@@ -413,7 +413,7 @@ function FileBlock({
       icon={ATTACHMENT_KIND_ICON[attachmentKind(attachment.mime)]}
       name={attachment.name}
       detail={detail}
-      accessibilityLabel={`Save ${attachment.name}`}
+      accessibilityLabel={`Open ${attachment.name}`}
       onPress={phase === "fetching" ? undefined : start}
       onLongPress={context.onLongPress}
       trailing="download-outline"
@@ -450,7 +450,9 @@ export function AttachmentContent({
         onOpen={onOpen}
       />
     );
-  if (kind === "audio")
+  // Fork: on Android an audio attachment opens in the phone's own player (download, then hand off),
+  // like any other file; the in-app player stays on iOS.
+  if (kind === "audio" && Platform.OS !== "android")
     return <AudioBlock context={context} attachment={attachment} />;
   return <FileBlock context={context} attachment={attachment} />;
 }

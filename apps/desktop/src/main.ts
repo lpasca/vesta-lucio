@@ -7,6 +7,7 @@ import {
   shell,
 } from "electron";
 import path from "node:path";
+import { saveAndOpenDownload } from "./open-file";
 import { CHANNEL } from "./channels";
 import { readNativeGeolocation } from "./geolocation";
 import { trackQuitIntent } from "./lifecycle";
@@ -77,6 +78,14 @@ if (!gotLock) {
         return shell.openExternal(url);
       throw new Error("openExternal only accepts http(s) urls");
     });
+    // Chat attachments: write the bytes into Downloads and hand the file to the OS default app.
+    ipcMain.handle(
+      CHANNEL.fileSaveOpen,
+      (_event, name: unknown, data: unknown) =>
+        saveAndOpenDownload(app.getPath("downloads"), name, data, (file) =>
+          shell.openPath(file),
+        ),
+    );
     // App self-update is manual: the renderer drives check -> download -> relaunch on a click.
     ipcMain.handle(CHANNEL.appUpdateCheck, () => getAppUpdate());
     ipcMain.handle(CHANNEL.appUpdateDownload, (event) =>
