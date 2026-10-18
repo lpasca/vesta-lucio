@@ -22,6 +22,7 @@ function io(overrides: Partial<SaveAttachmentIo> = {}): SaveAttachmentIo {
     },
     probe: () => Promise.resolve(200),
     download: () => Promise.resolve("file:///cache/report.pdf"),
+    open: () => Promise.resolve(false),
     share: () => Promise.resolve(),
     ...overrides,
   };
@@ -52,6 +53,38 @@ describe("saveAttachment", () => {
     const url = download.mock.calls[0]?.[0] ?? "";
     expect(url).toBe(
       "https://gw.example/agents/apollo/app-chat/attachments/att1?download=1&token=t",
+    );
+    expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the file in its app and skips the share sheet when an app handles it", async () => {
+    const open = vi.fn((): Promise<boolean> => Promise.resolve(true));
+    const share = vi.fn((): Promise<void> => Promise.resolve());
+    await saveAttachment(
+      io({
+        open: (uri, mimeType) => {
+          expect(uri).toBe("file:///cache/report.pdf");
+          expect(mimeType).toBe("application/pdf");
+          return open();
+        },
+        share: () => share(),
+      }),
+      "apollo",
+      ATTACHMENT,
+    );
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(share).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the share sheet when no app can open the file", async () => {
+    const share = vi.fn((): Promise<void> => Promise.resolve());
+    await saveAttachment(
+      io({
+        open: () => Promise.reject(new Error("No Activity found")),
+        share: () => share(),
+      }),
+      "apollo",
+      ATTACHMENT,
     );
     expect(share).toHaveBeenCalledTimes(1);
   });

@@ -107,6 +107,7 @@ export function createElectronBridge(api: VestaNativeApi): NativeBridge {
       get: () => api.getOpenAtLogin(),
       set: (enabled) => api.setOpenAtLogin(enabled),
     },
+    saveAndOpenFile: (name, data) => api.saveAndOpenFile(name, data),
     // macOS keeps its native traffic lights; only Windows draws custom controls.
     windowControls:
       platform === "windows"

@@ -1,6 +1,6 @@
-appId: com.vesta.desktop
-productName: Vesta
-artifactName: "Vesta_${version}_${arch}.${ext}"
+appId: com.vesta.desktop.lucio
+productName: Vesta L
+artifactName: "VestaL_${version}_${arch}.${ext}"
 directories:
   output: dist
 files:
