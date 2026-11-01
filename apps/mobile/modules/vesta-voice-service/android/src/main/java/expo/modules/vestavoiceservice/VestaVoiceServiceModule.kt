@@ -21,7 +21,18 @@ class VestaVoiceServiceModule : Module() {
     }
 
     AsyncFunction("stopForegroundServiceAsync") {
-      context.stopService(Intent(context, VoiceForegroundService::class.java))
+      // Fork fix: a plain stopService() that lands before the service has run onStartCommand
+      // leaves Android waiting for a startForeground() that never comes, and Android kills the
+      // app (ForegroundServiceDidNotStartInTimeException). Ask the service to stop itself
+      // instead: this intent queues behind any pending start, so startForeground() runs first.
+      val stop = Intent(context, VoiceForegroundService::class.java)
+        .setAction(VoiceForegroundService.ACTION_STOP)
+      try {
+        context.startService(stop)
+      } catch (error: IllegalStateException) {
+        // The app is in the background and may not start services; nothing is pending then.
+        context.stopService(Intent(context, VoiceForegroundService::class.java))
+      }
     }
   }
 }

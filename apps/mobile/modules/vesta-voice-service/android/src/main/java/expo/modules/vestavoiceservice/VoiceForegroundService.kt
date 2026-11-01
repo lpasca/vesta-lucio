@@ -17,6 +17,11 @@ class VoiceForegroundService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    if (intent?.action == ACTION_STOP) {
+      stopForeground(STOP_FOREGROUND_REMOVE)
+      stopSelf()
+      return START_NOT_STICKY
+    }
     val title = intent?.getStringExtra(EXTRA_TITLE) ?: "Voice session"
     val body = intent?.getStringExtra(EXTRA_BODY) ?: "Listening"
 
@@ -54,6 +59,7 @@ class VoiceForegroundService : Service() {
   }
 
   companion object {
+    const val ACTION_STOP = "expo.modules.vestavoiceservice.STOP"
     const val EXTRA_TITLE = "title"
     const val EXTRA_BODY = "body"
     private const val CHANNEL_ID = "vesta-voice-session"
