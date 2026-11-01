@@ -1,3 +1,28 @@
+diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt
+index 992239b..0003f43 100644
+--- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt
++++ b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt
+@@ -476,6 +476,20 @@ class AudioModule : Module() {
+           if (!focusAcquired) {
+             requestAudioFocus()
+           }
++          // Vesta L: in a voice conversation the phone is in call mode; playing the agent as call
++          // audio lets Android's echo canceller subtract it from the microphone.
++          val inCall = audioManager.mode == AudioManager.MODE_IN_COMMUNICATION
++          player.ref.setAudioAttributes(
++            if (inCall) {
++              androidx.media3.common.AudioAttributes.Builder()
++                .setUsage(androidx.media3.common.C.USAGE_VOICE_COMMUNICATION)
++                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH)
++                .build()
++            } else {
++              androidx.media3.common.AudioAttributes.DEFAULT
++            },
++            false
++          )
+           player.ref.play()
+         }
+       }
 diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt
 index 8ecdcc1..588f950 100644
 --- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt
