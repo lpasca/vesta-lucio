@@ -87,6 +87,7 @@ export function VoiceConversationPanel({
   height,
   onToggleMute,
   onEnd,
+  onStopSpeaking,
 }: {
   agent: AgentRow | null;
   name: string;
@@ -97,6 +98,7 @@ export function VoiceConversationPanel({
   height: number;
   onToggleMute: () => void;
   onEnd: () => void;
+  onStopSpeaking: () => void;
 }) {
   const { colors } = usePreferences();
   const spoken = transcript.trim();
@@ -136,7 +138,15 @@ export function VoiceConversationPanel({
           active={micMuted}
           onPress={onToggleMute}
         />
-        <View style={[styles.pill, { backgroundColor: colors.input }]}>
+        {/* Fork: the mic is silent while the agent speaks (no echo on Android), so a tap on the
+            pill is how the user cuts a reply short. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={phase === "speaking" ? "Stop speaking" : undefined}
+          disabled={phase !== "speaking"}
+          onPress={onStopSpeaking}
+          style={[styles.pill, { backgroundColor: colors.input }]}
+        >
           {/* The words are anchored to the pill's bottom inside a three-line clip, so the newest
               word always sits at the bottom and older lines run out the top. */}
           {spoken ? (
@@ -162,10 +172,10 @@ export function VoiceConversationPanel({
                 { color: colors.secondaryText },
               ]}
             >
-              {PHASE_LABELS[phase]}
+              {phase === "speaking" ? "speaking · tap to stop" : PHASE_LABELS[phase]}
             </Text>
           )}
-        </View>
+        </Pressable>
         <RoundControl label="End conversation" icon="close" onPress={onEnd} />
       </Reanimated.View>
     </View>
