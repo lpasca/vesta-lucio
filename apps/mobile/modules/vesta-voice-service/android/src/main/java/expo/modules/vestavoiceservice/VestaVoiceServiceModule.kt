@@ -18,6 +18,11 @@ class VestaVoiceServiceModule : Module() {
         .putExtra(VoiceForegroundService.EXTRA_TITLE, title)
         .putExtra(VoiceForegroundService.EXTRA_BODY, body)
       context.startForegroundService(intent)
+      // Fork fix: startForegroundService() returns a ComponentName, which Expo cannot send to
+      // JS ("Unknown type: class android.content.ComponentName"), so the call was rejected after
+      // the service had already started; the app then tore voice down and stopped the service
+      // before it reached the foreground, which Android punishes by killing the app.
+      Unit
     }
 
     AsyncFunction("stopForegroundServiceAsync") {
@@ -29,9 +34,11 @@ class VestaVoiceServiceModule : Module() {
         .setAction(VoiceForegroundService.ACTION_STOP)
       try {
         context.startService(stop)
+        Unit
       } catch (error: IllegalStateException) {
         // The app is in the background and may not start services; nothing is pending then.
         context.stopService(Intent(context, VoiceForegroundService::class.java))
+        Unit
       }
     }
   }
