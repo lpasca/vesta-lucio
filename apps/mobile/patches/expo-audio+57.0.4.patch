@@ -1,0 +1,76 @@
+diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt
+index 8ecdcc1..588f950 100644
+--- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt
++++ b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioStream.kt
+@@ -4,6 +4,7 @@ import android.Manifest
+ import android.media.AudioFormat
+ import android.media.AudioRecord
+ import android.media.MediaRecorder
++import android.media.audiofx.AcousticEchoCanceler
+ import androidx.annotation.RequiresPermission
+ import expo.modules.kotlin.AppContext
+ import expo.modules.kotlin.jni.NativeArrayBuffer
+@@ -39,6 +40,9 @@ class AudioStream(
+   val id: String = java.util.UUID.randomUUID().toString()
+ 
+   private var audioRecord: AudioRecord? = null
++  // Vesta L: Android's echo canceller, attached to the voice-call mic so the speaker's output
++  // is not captured back as the user's speech.
++  private var echoCanceler: AcousticEchoCanceler? = null
+   private var captureJob: Job? = null
+   private val coroutineScope = CoroutineScope(Dispatchers.IO)
+ 
+@@ -72,6 +76,7 @@ class AudioStream(
+     sampleRate = config.sampleRate
+     channels = config.channelCount
+     audioRecord = recorder
++    echoCanceler = attachEchoCanceler(recorder)
+     startTimeNanos = System.nanoTime()
+     isStreaming = true
+     emitStatus()
+@@ -84,6 +89,8 @@ class AudioStream(
+     isStreaming = false
+     captureJob?.cancel()
+     captureJob = null
++    echoCanceler?.release()
++    echoCanceler = null
+     audioRecord?.stop()
+     audioRecord?.release()
+     audioRecord = null
+@@ -138,6 +145,20 @@ class AudioStream(
+ 
+   @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+   private fun createAudioRecord(config: ResolvedAudioConfig): AudioRecord {
++    // Vesta L: the voice-call source is the one Android runs its echo cancellation and noise
++    // suppression on. Fall back to the raw mic if a device cannot open it.
++    val voiceCall = AudioRecord(
++      MediaRecorder.AudioSource.VOICE_COMMUNICATION,
++      config.sampleRate,
++      config.channelConfig,
++      config.audioEncoding,
++      config.bufferSize
++    )
++    if (voiceCall.state == AudioRecord.STATE_INITIALIZED) {
++      return voiceCall
++    }
++    voiceCall.release()
++
+     val recorder = AudioRecord(
+       MediaRecorder.AudioSource.MIC,
+       config.sampleRate,
+@@ -158,6 +179,15 @@ class AudioStream(
+     return recorder
+   }
+ 
++  private fun attachEchoCanceler(recorder: AudioRecord): AcousticEchoCanceler? {
++    if (!AcousticEchoCanceler.isAvailable()) return null
++    return try {
++      AcousticEchoCanceler.create(recorder.audioSessionId)?.apply { enabled = true }
++    } catch (e: RuntimeException) {
++      null
++    }
++  }
++
+   private fun startCaptureLoop(recorder: AudioRecord, config: ResolvedAudioConfig) {
+     captureJob = coroutineScope.launch {
+       val readSizeBytes = config.readSize
