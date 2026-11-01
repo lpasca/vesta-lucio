@@ -59,9 +59,6 @@ const PLAYBACK_AUDIO_MODE = {
 // ports, the session as the behavior (dictation vs conversation, the plays of the engine). A
 // conversation additionally holds the native hands-free session (Bluetooth routing, echo
 // cancellation, and the Android microphone foreground service) around the microphone.
-// How long the mic stays silent after the agent stops speaking, for the speaker's decay.
-const ECHO_TAIL_MS = 400;
-
 export function useLiveVoice({
   name,
   enabled,
@@ -79,11 +76,6 @@ export function useLiveVoice({
   // A muted mic streams silence rather than nothing, so the session stays up.
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
-  // Fork fix: Android has no echo cancellation here (the hands-free session module is iOS only),
-  // so on the speaker the mic hears the agent's reply and sends it back as the user's speech.
-  // Stream silence while the agent speaks, plus a short tail for the speaker's last word.
-  const agentSpeakingRef = useRef(false);
-  const echoTailUntilRef = useRef(0);
 
   // Live-updated refs, so the session (created once per agent) always reads the current
   // callbacks and settings.
@@ -106,10 +98,7 @@ export function useLiveVoice({
     encoding: "int16",
     onBuffer: (buffer) => {
       const pcm = buffer.data.slice(0);
-      const echoGuard =
-        Platform.OS === "android" &&
-        (agentSpeakingRef.current || Date.now() < echoTailUntilRef.current);
-      if (micMutedRef.current || echoGuard) new Uint8Array(pcm).fill(0);
+      if (micMutedRef.current) new Uint8Array(pcm).fill(0);
       frameSinkRef.current?.(pcm);
     },
   });
@@ -275,11 +264,7 @@ export function useLiveVoice({
           if (mode === null) setMicMuted(false);
         },
         onListeningChange: setListening,
-        onSpeakingChange: (value) => {
-          agentSpeakingRef.current = value;
-          if (!value) echoTailUntilRef.current = Date.now() + ECHO_TAIL_MS;
-          setSpeaking(value);
-        },
+        onSpeakingChange: setSpeaking,
         onUserSpeakingChange: (speaking) =>
           callbacksRef.current.onUserSpeakingChange(speaking),
         onInactivityStop: () => callbacksRef.current.onInactivityStop(),
