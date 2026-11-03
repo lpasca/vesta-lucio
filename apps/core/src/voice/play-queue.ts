@@ -16,6 +16,9 @@ export interface Speaker {
   resume: () => void;
   // Whether the speaker decodes Ogg Opus, the best format a provider streams.
   playsOggOpus: boolean;
+  // How long a play may take to make its first sound; a speaker that fetches the whole audio
+  // before playing (a poor-connection mode) needs longer than a streaming one.
+  startTimeoutMs?: () => number;
 }
 
 export type PlayReport = "started" | "finished" | "failed";
@@ -89,7 +92,7 @@ export function createPlayQueue(deps: PlayQueueDeps): PlayQueue {
         if (outcome.started) return;
         outcome.gaveUp = true;
         controller.abort();
-      }, PLAY_START_TIMEOUT_MS);
+      }, deps.speaker.startTimeoutMs?.() ?? PLAY_START_TIMEOUT_MS);
       sounding = true;
       await deps.speaker.play(url, controller.signal, () => {
         outcome.started = true;

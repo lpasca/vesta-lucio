@@ -15,6 +15,26 @@ import { FormRow, SwitchRow } from "@/components/ui/Form";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { Quote, Text } from "@/components/ui/Typography";
 import { usePreferences } from "@/preferences/PreferencesProvider";
+import { usePoorConnection } from "@/voice/poor-connection";
+
+// Device-local: how this phone's link should be treated, whatever the agent's voice services.
+function ConnectionCard() {
+  const { colors } = usePreferences();
+  const [poor, setPoor] = usePoorConnection();
+  return (
+    <Card>
+      <Text family="heading" style={[styles.title, { color: colors.text }]}>
+        Connection
+      </Text>
+      <SwitchRow
+        label="Poor connection mode"
+        detail="Replies download in full before they play, so a weak or dropping signal delays a reply instead of cutting it. Off: replies stream and start sooner."
+        value={poor}
+        onValueChange={setPoor}
+      />
+    </Card>
+  );
+}
 
 const DOMAIN_TITLES: Record<VoiceDomain, string> = {
   stt: "Speech to text",
@@ -167,6 +187,7 @@ export function VoiceSection() {
   const { stt, tts, judge, behaviors } = settings.data;
   return (
     <>
+      <ConnectionCard />
       <DomainCard
         domain="stt"
         status={stt}

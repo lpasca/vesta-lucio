@@ -19,6 +19,11 @@ import {
 import { fetchVoiceStatus, prepareSpeech } from "@vesta/core";
 import { useSession } from "@/session/SessionProvider";
 import { setHandsFreeSessionActive } from "@/voice/hands-free-session";
+import { downloadReplyAudio } from "@/voice/burst-download";
+import {
+  loadPoorConnection,
+  poorConnectionEnabled,
+} from "@/voice/poor-connection";
 import { setRecordingHapticsEnabled } from "@/voice/recording-haptics";
 import {
   startVoiceForegroundService,
@@ -42,6 +47,9 @@ const CONVERSATION_INACTIVITY_MS = 15 * 60_000;
 
 // Android's player decodes Ogg Opus; the iOS player decodes no Ogg, so iOS plays MP3.
 const PLAYS_OGG_OPUS = Platform.OS === "android";
+
+// A downloaded reply may take this long to arrive before it plays on a weak link.
+const POOR_CONNECTION_START_MS = 120_000;
 
 const RECORDING_AUDIO_MODE = {
   allowsRecording: true,
@@ -136,6 +144,10 @@ export function useLiveVoice({
   }, [api, name]);
 
   useEffect(() => {
+    void loadPoorConnection();
+  }, []);
+
+  useEffect(() => {
     if (!enabled) return;
     let live = true;
     void getRecordingPermissionsAsync()
@@ -165,6 +177,14 @@ export function useLiveVoice({
       onStarted: () => void,
     ) => {
       if (signal.aborted) return;
+      // Poor connection mode: the whole reply lands on the phone first, then plays from the
+      // file, so a drop mid-reply cannot cut it. A download that never completes plays nothing.
+      let source = url;
+      if (poorConnectionEnabled()) {
+        const local = await downloadReplyAudio(url, signal);
+        if (local === null || signal.aborted) return;
+        source = local;
+      }
       const target = playerRef.current;
       await new Promise<void>((resolve) => {
         // The source dropping out of a loaded/buffering state after it started is a failed or
@@ -199,7 +219,7 @@ export function useLiveVoice({
           target.pause();
           settle();
         });
-        target.replace(url);
+        target.replace(source);
         target.play();
       });
     };
@@ -238,6 +258,8 @@ export function useLiveVoice({
         },
         speaker: {
           playsOggOpus: PLAYS_OGG_OPUS,
+          startTimeoutMs: () =>
+            poorConnectionEnabled() ? POOR_CONNECTION_START_MS : 15_000,
           play,
           pause: () => {
             playerRef.current.pause();
