@@ -37,8 +37,10 @@ export async function saveAttachment(
   const path = appChatAttachmentPath(agent, attachment.id);
   const url = await io.authedUrl(path, new URLSearchParams({ download: "1" }));
   let uri: string;
+  console.warn(`[VestaL-attach] download start ${attachment.name}`);
   try {
     uri = await io.download(url, attachment.name, onProgress);
+    console.warn(`[VestaL-attach] download done ${uri}`);
   } catch (error) {
     // The native download API hides the HTTP status, so a failure is classified by re-asking
     // the server: a removed blob is a stable 410, anything else rethrows as the transient it is.
@@ -46,6 +48,10 @@ export async function saveAttachment(
     if (status === 410) throw new AttachmentRemovedError();
     throw error;
   }
-  const opened = await io.open(uri, attachment.mime).catch(() => false);
+  const opened = await io.open(uri, attachment.mime).catch((error: unknown) => {
+    console.warn(`[VestaL-attach] open failed: ${String(error)}`);
+    return false;
+  });
+  console.warn(`[VestaL-attach] opened=${String(opened)}`);
   if (!opened) await io.share(uri, attachment.mime);
 }

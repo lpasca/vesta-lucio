@@ -88,6 +88,10 @@ function Tile({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       disabled={!onPress && !onLongPress}
+      // Vesta L diagnostic (build 8): proves a touch reaches the tile itself.
+      onPressIn={() => {
+        console.warn(`[VestaL-attach] pressIn ${name} hasOnPress=${String(Boolean(onPress))}`);
+      }}
       onPress={onPress}
       onLongPress={onLongPress}
       style={({ pressed }) => [
@@ -376,6 +380,7 @@ function FileBlock({
     return <RemovedTile context={context} attachment={attachment} />;
 
   const start = () => {
+    console.warn(`[VestaL-attach] tap ${attachment.name} mime=${attachment.mime}`);
     setPhase("fetching");
     setReceived(0);
     saveAttachment(
@@ -397,7 +402,8 @@ function FileBlock({
           return;
         }
         setPhase("idle");
-        showError(`Couldn't download ${attachment.name}`);
+        console.warn(`[VestaL-attach] failed ${attachment.name}: ${String(error)}`);
+        showError(error, `Couldn't download ${attachment.name}`);
       },
     );
   };
