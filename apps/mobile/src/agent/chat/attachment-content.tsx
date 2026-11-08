@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Image } from "expo-image";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Ionicons } from "@expo/vector-icons";
@@ -83,22 +84,36 @@ function Tile({
 }) {
   const { colors } = usePreferences();
   const palette = tilePalette(context.user, colors);
+  const [pressed, setPressed] = useState(false);
+  // Vesta L build 9: on Android the bubble sits inside a Compose menu host, which cancels an RN
+  // Pressable's press after pressIn (build 8 log: pressIn fired, onPress never). A native tap
+  // gesture is recognised by gesture-handler itself, so the host cannot cancel it.
+  const enabled = Boolean(onPress || onLongPress);
+  const tap = Gesture.Tap()
+    .enabled(Boolean(onPress))
+    .runOnJS(true)
+    .onBegin(() => setPressed(true))
+    .onFinalize((_event, success) => {
+      setPressed(false);
+      console.warn(`[VestaL-attach] tap-gesture ${name} success=${String(success)}`);
+      if (success) onPress?.();
+    });
+  const longPress = Gesture.LongPress()
+    .enabled(Boolean(onLongPress))
+    .runOnJS(true)
+    .onStart(() => onLongPress?.());
+  const gesture = Gesture.Exclusive(longPress, tap);
   return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      disabled={!onPress && !onLongPress}
-      // Vesta L diagnostic (build 8): proves a touch reaches the tile itself.
-      onPressIn={() => {
-        console.warn(`[VestaL-attach] pressIn ${name} hasOnPress=${String(Boolean(onPress))}`);
-      }}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      style={({ pressed }) => [
-        styles.tile,
-        { backgroundColor: palette.background, opacity: pressed ? 0.72 : 1 },
-      ]}
-    >
+    <GestureDetector gesture={gesture}>
+      <View
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !enabled }}
+        style={[
+          styles.tile,
+          { backgroundColor: palette.background, opacity: pressed ? 0.72 : 1 },
+        ]}
+      >
       <Ionicons
         name={icon}
         size={19}
@@ -130,7 +145,8 @@ function Tile({
           style={{ opacity: palette.secondaryOpacity }}
         />
       ) : null}
-    </Pressable>
+      </View>
+    </GestureDetector>
   );
 }
 
