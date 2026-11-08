@@ -433,6 +433,7 @@ export default function ChatPage() {
                   height={CONVERSATION_PANEL_HEIGHT}
                   onToggleMute={voice.toggleMicMuted}
                   onEnd={endConversation}
+                  onStopSpeech={voice.stopSpeech}
                 />
               ) : (
                 <>

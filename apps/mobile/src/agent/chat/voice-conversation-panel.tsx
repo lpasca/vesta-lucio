@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, {
   Easing,
   FadeInUp,
@@ -87,6 +88,7 @@ export function VoiceConversationPanel({
   height,
   onToggleMute,
   onEnd,
+  onStopSpeech,
 }: {
   agent: AgentRow | null;
   name: string;
@@ -97,17 +99,29 @@ export function VoiceConversationPanel({
   height: number;
   onToggleMute: () => void;
   onEnd: () => void;
+  /** Vesta L: tapping the orb (anywhere on the panel outside the buttons) silences the agent. */
+  onStopSpeech?: () => void;
 }) {
   const { colors } = usePreferences();
   const spoken = transcript.trim();
   const { head, tail } = splitSpokenTail(spoken);
 
+  const stopTap = Gesture.Tap()
+    .enabled(Boolean(onStopSpeech))
+    .runOnJS(true)
+    .onEnd((_event, success) => {
+      if (success) onStopSpeech?.();
+    });
+
   return (
     <View style={[styles.panel, { height }]}>
+      <GestureDetector gesture={stopTap}>
       <Reanimated.View
+        accessibilityLabel={onStopSpeech ? `Stop ${name} talking` : undefined}
+        accessibilityRole={onStopSpeech ? "button" : undefined}
         entering={FadeInUp.duration(ORB_ENTER_MS).easing(SHEET_EASE)}
         exiting={FadeOutDown.duration(ORB_EXIT_MS).easing(SHEET_EASE)}
-        pointerEvents="none"
+        pointerEvents={onStopSpeech ? "auto" : "none"}
         style={styles.orbLayer}
       >
         {agent ? (
@@ -123,6 +137,7 @@ export function VoiceConversationPanel({
           />
         ) : null}
       </Reanimated.View>
+      </GestureDetector>
       <Reanimated.View
         entering={FadeInUp.duration(ROW_ENTER_MS)
           .delay(ROW_ENTER_DELAY_MS)
