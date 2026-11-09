@@ -6,7 +6,8 @@ import {
   fetchVoiceStatus,
   type OrbMotion,
 } from "@vesta/core";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text as RNText, View, useWindowDimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   KeyboardStickyView,
@@ -421,6 +422,22 @@ export default function ChatPage() {
                 onPress={scrollToLatest}
               />
             </View>
+            {/* Vesta L build 13: stop a spoken reply from plain chat too, not only from the orb. */}
+            {voice.speaking && recordingMode !== "conversation" ? (
+              <Pressable
+                accessibilityLabel={`Stop ${name} talking`}
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={voice.stopSpeech}
+                style={({ pressed }) => [
+                  styles.stopSpeechPill,
+                  { backgroundColor: colors.danger, opacity: pressed ? 0.72 : 1 },
+                ]}
+              >
+                <Ionicons name="stop" size={14} color="white" />
+                <RNText style={styles.stopSpeechLabel}>Stop</RNText>
+              </Pressable>
+            ) : null}
             <GlassSurface style={styles.composerSurface}>
               {recordingMode === "conversation" ? (
                 <VoiceConversationPanel
@@ -528,4 +545,17 @@ const styles = StyleSheet.create({
     zIndex: 3,
     alignItems: "center",
   },
+  stopSpeechPill: {
+    position: "absolute",
+    top: -40,
+    left: 12,
+    zIndex: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  stopSpeechLabel: { color: "white", fontWeight: "600", fontSize: 14 },
 });

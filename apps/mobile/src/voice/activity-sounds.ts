@@ -97,6 +97,20 @@ export function useActivitySoundSettings(): [
   return [value, set];
 }
 
+// ---- diagnostic log (Vesta L build 13) -------------------------------------------------------
+// Every sound decision is kept in memory (last 400 lines) so the person can copy it from Voice
+// settings and paste it into chat, no cable or logcat needed.
+const soundLog: string[] = [];
+function slog(message: string): void {
+  const line = `${new Date().toISOString().slice(11, 23)} ${message}`;
+  soundLog.push(line);
+  if (soundLog.length > 400) soundLog.shift();
+  slog(`${message}`);
+}
+export function soundLogText(): string {
+  return soundLog.length ? soundLog.join("\n") : "(no sound events yet: open a voice conversation first)";
+}
+
 // ---- live event bus ----------------------------------------------------------------------------
 
 const eventListeners = new Set<(event: ChatMessage) => void>();
@@ -146,7 +160,10 @@ export function useActivitySounds({
     speakingRef.current = speaking;
   }, [speaking]);
   useEffect(() => {
-    if (transcript.trim()) lastTalkRef.current = Date.now();
+    if (transcript.trim()) {
+      lastTalkRef.current = Date.now();
+      slog(`transcript change (${transcript.trim().length} chars)`);
+    }
   }, [transcript]);
   useEffect(() => {
     prefsRef.current = prefs;
@@ -160,7 +177,8 @@ export function useActivitySounds({
         players[kind] = createAudioPlayer(
           ACTIVITY_SOUNDS[kind][prefs.durationMs],
         );
-      } catch {
+      } catch (error) {
+        slog(`${kind} load failed: ${String(error)}`);
         // A sound that cannot load is skipped; the rest still play.
       }
     }
@@ -182,16 +200,34 @@ export function useActivitySounds({
       Date.now() - lastTalkRef.current < TALKING_HOLD_MS ||
       prefsRef.current.volume <= 0;
 
+    // Vesta L build 13 (diagnostic): one log line per sound decision, tag [VestaL-sound].
     const play = (kind: ActivityKind): void => {
-      if (quiet()) return;
+      const sinceTalk = Date.now() - lastTalkRef.current;
+      const why = speakingRef.current
+        ? "speaking"
+        : sinceTalk < TALKING_HOLD_MS
+          ? `talking(${sinceTalk}ms)`
+          : prefsRef.current.volume <= 0
+            ? "volume0"
+            : "";
+      if (why) {
+        slog(`${kind} muted: ${why}`);
+        return;
+      }
       const player = playersRef.current[kind];
-      if (!player) return;
+      if (!player) {
+        slog(`${kind} no player`);
+        return;
+      }
       try {
         player.volume = prefsRef.current.volume / 100;
         void player.seekTo(0);
         player.play();
-      } catch {
-        // Not worth an error: the activity rows still show.
+        slog(
+          `${kind} played vol=${prefsRef.current.volume} dur=${prefsRef.current.durationMs} loaded=${String(player.isLoaded)} playing=${String(player.playing)}`,
+        );
+      } catch (error) {
+        slog(`${kind} play failed: ${String(error)}`);
       }
     };
 
@@ -219,6 +255,7 @@ export function useActivitySounds({
     };
 
     const onEvent = (event: ChatMessage): void => {
+      slog(`event ${event.type}`);
       if (event.type === "tool_start") {
         open += 1;
         startLongWatch();
@@ -235,6 +272,7 @@ export function useActivitySounds({
     };
 
     eventListeners.add(onEvent);
+    slog("sounds mounted (voice conversation open)");
     return () => {
       eventListeners.delete(onEvent);
       stopPulse();

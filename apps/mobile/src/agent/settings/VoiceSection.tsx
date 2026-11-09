@@ -16,7 +16,9 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { Quote, Text } from "@/components/ui/Typography";
 import { usePreferences } from "@/preferences/PreferencesProvider";
 import { usePoorConnection } from "@/voice/poor-connection";
-import { useActivitySoundSettings } from "@/voice/activity-sounds";
+import { soundLogText, useActivitySoundSettings } from "@/voice/activity-sounds";
+import * as Clipboard from "expo-clipboard";
+import { Button } from "@/components/ui/Button";
 import { Slider } from "@/components/ui/Slider";
 
 // Device-local: how this phone's link should be treated, whatever the agent's voice services.
@@ -87,6 +89,17 @@ function ActivitySoundsCard() {
           setDuration(null);
         }}
       />
+      <Button
+        variant="secondary"
+        accessibilityLabel="Copy activity sound log"
+        onPress={() => {
+          void Clipboard.setStringAsync(soundLogText()).then(() =>
+            Alert.alert("Sound log copied", "Paste it into the chat with your agent."),
+          );
+        }}
+      >
+        Copy sound log (diagnostic)
+      </Button>
     </Card>
   );
 }
