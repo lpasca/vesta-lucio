@@ -31,6 +31,7 @@ import {
   selectAgentActivitySnapshot,
 } from "./agent-activity-model";
 import { agentHolds } from "@/holds/agent-holds";
+import { emitActivity } from "@/voice/activity-sounds";
 
 function idsEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -91,7 +92,7 @@ export function useAgentSocket(
       naturalPacing: () => naturalPacingRef.current,
       repliesSpoken: () => repliesSpokenRef.current,
       initialState: agentHolds.chat.read(key) ?? undefined,
-    });
+    }, { onActivity: emitActivity });
     // The key is captured here, so a commit from a previous agent/gateway epoch can only ever
     // write its own cell, never the next one's.
     const unsubscribe = created.subscribe(() => {

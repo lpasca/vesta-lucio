@@ -1,6 +1,5 @@
-import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useAudioPlayer } from "expo-audio";
+import { useActivitySounds } from "@/voice/activity-sounds";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, {
   Easing,
@@ -34,12 +33,6 @@ const ORB_EXIT_MS = 270;
 const ROW_ENTER_MS = 380;
 const ROW_ENTER_DELAY_MS = 15;
 const ROW_EXIT_MS = 190;
-
-// Vesta L: a soft two-note tick while the agent is thinking, so a silent pause reads as work, not a
-// dropped line. First tick after a short grace (quick replies stay silent), then every 2 s.
-const THINKING_TICK = require("../../../assets/sounds/thinking-tick.wav");
-const THINKING_TICK_FIRST_MS = 900;
-const THINKING_TICK_EVERY_MS = 2000;
 
 const PHASE_LABELS: Record<ConversationPhase, string> = {
   connecting: "connecting…",
@@ -114,33 +107,8 @@ export function VoiceConversationPanel({
   const spoken = transcript.trim();
   const { head, tail } = splitSpokenTail(spoken);
 
-  const tick = useAudioPlayer(THINKING_TICK);
-  useEffect(() => {
-    if (phase !== "thinking") return;
-    const play = () => {
-      try {
-        tick.volume = 0.6;
-        void tick.seekTo(0);
-        tick.play();
-      } catch {
-        // A tick that cannot play is not worth an error: the label still says "thinking".
-      }
-    };
-    let every: ReturnType<typeof setInterval> | undefined;
-    const first = setTimeout(() => {
-      play();
-      every = setInterval(play, THINKING_TICK_EVERY_MS);
-    }, THINKING_TICK_FIRST_MS);
-    return () => {
-      clearTimeout(first);
-      if (every) clearInterval(every);
-      try {
-        tick.pause();
-      } catch {
-        // Already stopped or released.
-      }
-    };
-  }, [phase, tick]);
+  // Vesta L build 12: the agent's activity as sound (see voice/activity-sounds.ts).
+  useActivitySounds({ speaking: phase === "speaking", transcript });
 
   const stopTap = Gesture.Tap()
     .enabled(Boolean(onStopSpeech))

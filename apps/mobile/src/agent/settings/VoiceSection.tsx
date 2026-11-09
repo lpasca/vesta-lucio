@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { voiceUsageSummary } from "@vesta/core";
 import type { VoiceDomain, VoiceStatus } from "@vesta/core";
@@ -16,6 +16,8 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { Quote, Text } from "@/components/ui/Typography";
 import { usePreferences } from "@/preferences/PreferencesProvider";
 import { usePoorConnection } from "@/voice/poor-connection";
+import { useActivitySoundSettings } from "@/voice/activity-sounds";
+import { Slider } from "@/components/ui/Slider";
 
 // Device-local: how this phone's link should be treated, whatever the agent's voice services.
 function ConnectionCard() {
@@ -31,6 +33,59 @@ function ConnectionCard() {
         detail="Replies download in full before they play, so a weak or dropping signal delays a reply instead of cutting it. Off: replies stream and start sooner."
         value={poor}
         onValueChange={setPoor}
+      />
+    </Card>
+  );
+}
+
+// Device-local: how the agent's activity sounds during a voice conversation (Vesta L build 12).
+function ActivitySoundsCard() {
+  const { colors } = usePreferences();
+  const [sounds, setSounds] = useActivitySoundSettings();
+  const [volume, setVolume] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
+  const shownVolume = volume ?? sounds.volume;
+  const shownDuration = duration ?? sounds.durationMs;
+  return (
+    <Card>
+      <Text family="heading" style={[styles.title, { color: colors.text }]}>
+        Activity sounds
+      </Text>
+      <FormRow
+        label="Volume"
+        detail="A short sound for each thing the agent does in a voice conversation: a click per command, a ping per notification, a rise when a reply goes out, a slow pulse while a long command runs. Silent while you talk and while the agent speaks. 0 turns them off."
+        value={`${shownVolume}%`}
+      />
+      <Slider
+        accessibilityLabel="Activity sound volume"
+        valueText={`${shownVolume}%`}
+        value={shownVolume}
+        min={0}
+        max={100}
+        step={5}
+        onChange={setVolume}
+        onCommit={(next) => {
+          setSounds({ volume: next });
+          setVolume(null);
+        }}
+      />
+      <FormRow
+        label="Beep length"
+        detail="How long each sound lasts."
+        value={`${shownDuration} ms`}
+      />
+      <Slider
+        accessibilityLabel="Activity sound length"
+        valueText={`${shownDuration} ms`}
+        value={shownDuration}
+        min={20}
+        max={200}
+        step={20}
+        onChange={setDuration}
+        onCommit={(next) => {
+          setSounds({ durationMs: next });
+          setDuration(null);
+        }}
       />
     </Card>
   );
@@ -188,6 +243,7 @@ export function VoiceSection() {
   return (
     <>
       <ConnectionCard />
+      <ActivitySoundsCard />
       <DomainCard
         domain="stt"
         status={stt}

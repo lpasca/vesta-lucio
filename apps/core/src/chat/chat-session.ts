@@ -49,6 +49,9 @@ export interface ChatSessionCallbacks {
   onReply?: (text: string) => void;
   // The next paced reply, announced when its typing delay starts, so speech can be prepared.
   onPrefetch?: (text: string) => void;
+  // Vesta L: every live event off the socket, before folding (tool rows included), so a surface
+  // can react to the agent's activity (the mobile activity sounds). History never comes here.
+  onActivity?: (event: ChatMessage) => void;
 }
 
 export interface ChatSessionState {
@@ -217,6 +220,11 @@ export function createChatSession(
     { buildUrl: deps.buildUrl, createSocket: deps.createSocket },
     {
       onEvent: (event) => {
+        try {
+          callbacks.onActivity?.(event);
+        } catch {
+          // A listener fault never breaks the chat.
+        }
         const { state: next, paced } = foldLiveEvent(state.chat, event);
         update({ chat: next });
         if (paced) {
