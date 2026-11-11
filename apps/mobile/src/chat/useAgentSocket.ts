@@ -32,6 +32,7 @@ import {
 } from "./agent-activity-model";
 import { agentHolds } from "@/holds/agent-holds";
 import { emitActivity } from "@/voice/activity-sounds";
+import { useCoreActivityFeed } from "@/voice/core-activity-feed";
 
 function idsEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -105,6 +106,9 @@ export function useAgentSocket(
       slot.set(null);
     };
   }, [active, name, controller, key, slot]);
+
+  // Vesta L build 15: thinking / tool events come from the core's own stream, not the chat socket.
+  useCoreActivityFeed(active, name, controller);
 
   // A preference flip mid-conversation commits whatever was still typing out.
   useEffect(() => {

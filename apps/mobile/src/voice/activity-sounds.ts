@@ -135,6 +135,10 @@ function kindOf(event: ChatMessage): ActivityKind | null {
       return "reply";
     case "error":
       return "error";
+    case "status":
+      // Vesta L build 15: the turn starting is the most reliable "thinking" signal (thinking
+      // blocks only exist when extended thinking is on).
+      return event.state === "thinking" ? "thinking" : null;
     default:
       return null;
   }
@@ -214,7 +218,24 @@ export function useActivitySounds({
         slog(`${kind} muted: ${why}`);
         return;
       }
-      const player = playersRef.current[kind];
+      let player = playersRef.current[kind];
+      // Vesta L build 15: build 14 log showed loaded=false from the second reply on, so a player
+      // that has lost its source is recreated before playing instead of failing silently.
+      if (player && !player.isLoaded) {
+        try {
+          player.remove();
+        } catch {
+          // Already released.
+        }
+        try {
+          player = createAudioPlayer(ACTIVITY_SOUNDS[kind][prefsRef.current.durationMs]);
+          playersRef.current[kind] = player;
+          slog(`${kind} reloaded`);
+        } catch (error) {
+          slog(`${kind} reload failed: ${String(error)}`);
+          return;
+        }
+      }
       if (!player) {
         slog(`${kind} no player`);
         return;
