@@ -105,7 +105,7 @@ function slog(message: string): void {
   const line = `${new Date().toISOString().slice(11, 23)} ${message}`;
   soundLog.push(line);
   if (soundLog.length > 400) soundLog.shift();
-  slog(`${message}`);
+  console.log(`[VestaL-sound] ${line}`);
 }
 export function soundLogText(): string {
   return soundLog.length ? soundLog.join("\n") : "(no sound events yet: open a voice conversation first)";
