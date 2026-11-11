@@ -127,8 +127,9 @@ function kindOf(event: ChatMessage): ActivityKind | null {
     case "subagent_start":
       return "subagent";
     case "thinking":
-    case "assistant":
       return "thinking";
+    // Vesta L build 17: "assistant" arrives after the reply (build 16 log), a tick at the end of
+    // the turn, so it no longer makes a sound.
     case "notification":
       return "notify";
     case "chat":
@@ -214,6 +215,15 @@ export function useActivitySounds({
           : prefsRef.current.volume <= 0
             ? "volume0"
             : "";
+      // Vesta L build 17: build 16's log showed the turn-start "thinking" cue landing ~100 ms after
+      // the last transcript change, so the talking hold muted it every turn. A cue muted only by
+      // the hold is now deferred until the hold ends (then re-checked), never dropped.
+      if (why && !speakingRef.current && sinceTalk < TALKING_HOLD_MS && prefsRef.current.volume > 0) {
+        const wait = TALKING_HOLD_MS - sinceTalk + 50;
+        slog(`${kind} deferred ${wait}ms: ${why}`);
+        setTimeout(() => play(kind), wait);
+        return;
+      }
       if (why) {
         slog(`${kind} muted: ${why}`);
         return;
