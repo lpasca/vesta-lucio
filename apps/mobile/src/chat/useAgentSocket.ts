@@ -32,7 +32,6 @@ import {
 } from "./agent-activity-model";
 import { agentHolds } from "@/holds/agent-holds";
 import { emitActivity } from "@/voice/activity-sounds";
-import { useCoreActivityFeed } from "@/voice/core-activity-feed";
 
 function idsEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -88,7 +87,12 @@ export function useAgentSocket(
     const created = createChatSession({
       http: controller.http,
       agent,
-      buildUrl: () => controller.session.websocketUrl(chatSocketPath(agent)),
+      // Vesta L build 16: ask the chat server for the agent's activity cues (thinking, tools).
+      buildUrl: () =>
+        controller.session.websocketUrl(
+          chatSocketPath(agent),
+          new URLSearchParams({ activity: "1" }),
+        ),
       makeId: () => Crypto.randomUUID(),
       naturalPacing: () => naturalPacingRef.current,
       repliesSpoken: () => repliesSpokenRef.current,
@@ -108,7 +112,6 @@ export function useAgentSocket(
   }, [active, name, controller, key, slot]);
 
   // Vesta L build 15: thinking / tool events come from the core's own stream, not the chat socket.
-  useCoreActivityFeed(active, name, controller);
 
   // A preference flip mid-conversation commits whatever was still typing out.
   useEffect(() => {

@@ -218,37 +218,57 @@ export function useActivitySounds({
         slog(`${kind} muted: ${why}`);
         return;
       }
-      let player = playersRef.current[kind];
-      // Vesta L build 15: build 14 log showed loaded=false from the second reply on, so a player
-      // that has lost its source is recreated before playing instead of failing silently.
-      if (player && !player.isLoaded) {
+      // Vesta L build 16: build 15's log showed loaded=false on every play, and a player created and
+      // played in the same tick is silent. A loaded player plays at once; otherwise a fresh one is
+      // made and plays the moment its status reports loaded (or is given up after 2 s, logged).
+      const fire = (player: AudioPlayer, how: string): void => {
         try {
-          player.remove();
-        } catch {
-          // Already released.
-        }
-        try {
-          player = createAudioPlayer(ACTIVITY_SOUNDS[kind][prefsRef.current.durationMs]);
-          playersRef.current[kind] = player;
-          slog(`${kind} reloaded`);
+          player.volume = prefsRef.current.volume / 100;
+          void player.seekTo(0);
+          player.play();
+          slog(`${kind} played (${how}) vol=${prefsRef.current.volume} dur=${prefsRef.current.durationMs}`);
         } catch (error) {
-          slog(`${kind} reload failed: ${String(error)}`);
-          return;
+          slog(`${kind} play failed: ${String(error)}`);
         }
+      };
+      const current = playersRef.current[kind];
+      if (current?.isLoaded) {
+        fire(current, "ready");
+        return;
       }
-      if (!player) {
-        slog(`${kind} no player`);
+      let fresh: AudioPlayer;
+      try {
+        fresh = createAudioPlayer(ACTIVITY_SOUNDS[kind][prefsRef.current.durationMs]);
+      } catch (error) {
+        slog(`${kind} create failed: ${String(error)}`);
         return;
       }
       try {
-        player.volume = prefsRef.current.volume / 100;
-        void player.seekTo(0);
-        player.play();
-        slog(
-          `${kind} played vol=${prefsRef.current.volume} dur=${prefsRef.current.durationMs} loaded=${String(player.isLoaded)} playing=${String(player.playing)}`,
-        );
-      } catch (error) {
-        slog(`${kind} play failed: ${String(error)}`);
+        current?.remove();
+      } catch {
+        // Already released.
+      }
+      playersRef.current[kind] = fresh;
+      const startedAt = Date.now();
+      let done = false;
+      const sub = fresh.addListener("playbackStatusUpdate", (status) => {
+        if (done || !status.isLoaded) return;
+        done = true;
+        sub.remove();
+        clearTimeout(giveUp);
+        fire(fresh, `loaded in ${Date.now() - startedAt}ms`);
+      });
+      const giveUp = setTimeout(() => {
+        if (done) return;
+        done = true;
+        sub.remove();
+        slog(`${kind} never loaded in 2000ms (isLoaded=${String(fresh.isLoaded)})`);
+      }, 2000);
+      if (fresh.isLoaded && !done) {
+        done = true;
+        sub.remove();
+        clearTimeout(giveUp);
+        fire(fresh, "loaded at once");
       }
     };
 

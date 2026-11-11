@@ -131,8 +131,19 @@ function partitionHeld(
 // Tool-call events ride the wire (Debug, agent-internal) but never appear in the chat list: the
 // conversation is the person, not the machinery. Filtered at the live-fold entry so no tool row ever
 // enters `messages`; history pages from the app-chat service are already pure conversation.
+// Vesta L build 16: the chat server also relays bare activity cues (status, thinking, assistant,
+// subagent_start) for the phone's sounds; none of them is a chat row either. ("error" stays a
+// chat row as upstream intends, so the server does not relay it.)
+const ACTIVITY_ONLY = new Set([
+  "tool_start",
+  "tool_end",
+  "status",
+  "thinking",
+  "assistant",
+  "subagent_start",
+]);
 function isChatRow(event: ChatMessage): boolean {
-  return event.type !== "tool_start" && event.type !== "tool_end";
+  return !ACTIVITY_ONLY.has(event.type);
 }
 
 // Fold one live event: confirm an optimistic user bubble by intent_id (clear send_state, adopt
